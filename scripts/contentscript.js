@@ -45,8 +45,9 @@ var checkForNotification = function () {
                 let now = Date.now();
                 chrome.storage.local.set({ lastNotification: now });
                 chrome.storage.local.set({ silenceUntil: now + 60000 });
-                window.open(`https://www.fiverr.com/inbox/${firstUserName}`);
-                unreadNotification.close();
+                if (firstUserName) {
+                    window.open(`https://www.fiverr.com/inbox/${firstUserName}`);
+                } unreadNotification.close();
             };
 
             unreadNotification.onclose = function () {

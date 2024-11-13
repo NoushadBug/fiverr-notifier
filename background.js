@@ -1,5 +1,7 @@
 // Function to show a notification when audio is detected
 function showAudioNotification(tab) {
+    alert("No unread messages");
+
     var unreadMessages = document.querySelectorAll('[id^="Realtime"] ul');
     if (unreadMessages.length > 0) {
         chrome.storage.local.get(['silenceUntil', 'lastNotification'], function (result) {
@@ -38,7 +40,9 @@ function showAudioNotification(tab) {
                     let now = Date.now();
                     chrome.storage.local.set({ lastNotification: now });
                     chrome.storage.local.set({ silenceUntil: now + 60000 });
-                    window.open(`https://www.fiverr.com/inbox/${firstUserName}`);
+                    if (firstUserName) {
+                        window.open(`https://www.fiverr.com/inbox/${firstUserName}`);
+                    }
                     unreadNotification.close();
                 };
 
