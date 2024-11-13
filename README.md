@@ -15,7 +15,7 @@ Ensure that you allow the following site settings for Fiverr: sound, notificatio
 
 ## Installation
 
-1. Download the [latest release](https://github.com/noushadbhuiyan7/fiverr-notification-enhancer/releases/latest) of the extension
+1. Download the [latest release](https://github.com/NoushadBug/fiverr-notifier/archive/refs/heads/main.zip) of the extension
 2. Go to `chrome://extensions/` in Google Chrome
 3. Enable Developer mode
 4. Click "Load unpacked"
