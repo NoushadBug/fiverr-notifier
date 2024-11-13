@@ -8,20 +8,54 @@ var checkForNotification = function () {
     const blackFav = 'https://cdn0.iconfinder.com/data/icons/socicons-2/512/Fiverr-512.png';
     const oldFav = "https://www.fiverr.com/favicon.ico";
     const attentionTitles = ['⚡', '📬', '‼️', '🔔', '⭐', '*'];
-    let hasUnreadMessages = $(".unread-icon:not(.notifications-drawer-bell-unread)").length > 0;
-
-    var unreadMessages = document.querySelectorAll('[id^="Realtime"] ul');
-    if (unreadMessages.length > 0) {
-        new Notification('New Fiverr Inbox Message', {
-            body: 'You have ' + unreadMessages.length + ' unread messages',
-            icon: 'https://cdn0.iconfinder.com/data/icons/socicons-2/512/Fiverr-512.png'
-        })
-    }
 
     chrome.storage.local.get(['silenceUntil', 'lastNotification'], function (result) {
         let now = Date.now();
         let silenceUntil = result.silenceUntil || 0;
         let lastNotification = result.lastNotification || 0;
+        let hasUnreadMessages = $(".unread-icon:not(.notifications-drawer-bell-unread)").length > 0;
+        var unreadMessages = document.querySelectorAll('[id^="Realtime"] ul li');
+
+        // Only show notification if there are unread messages and it's been more than 1 minute since the last notification
+        if (unreadMessages.length > 0 && (now - lastNotification > 60000)) {
+            let bodyText;
+
+            if (unreadMessages.length === 1) {
+                bodyText = unreadMessages[0].textContent.trim();
+                bodyText = bodyText.substring(bodyText.indexOf('@') + 1).trim();
+            } else {
+                let messageList = [];
+                unreadMessages.forEach((message) => {
+                    let username = message.querySelector('.username')?.textContent.trim() || 'Unknown';
+                    messageList.push(`from - ${username}`);
+                });
+                bodyText = messageList.join('\n');
+            }
+
+            let firstUserName = unreadMessages[0].querySelector('.username')?.textContent.replace('@', '').trim();
+
+            let unreadNotification = new Notification(`Fiverr :: ${unreadMessages.length} new unread messages`, {
+                body: `𝗖𝗹𝗶𝗰𝗸 𝘁𝗼 𝗼𝗽𝗲𝗻 »
+` + bodyText,
+                icon: 'https://cdn0.iconfinder.com/data/icons/socicons-2/512/Fiverr-512.png',
+                requireInteraction: true
+            });
+
+            unreadNotification.onclick = function (event) {
+                let now = Date.now();
+                chrome.storage.local.set({ lastNotification: now });
+                chrome.storage.local.set({ silenceUntil: now + 60000 });
+                window.open(`https://www.fiverr.com/inbox/${firstUserName}`);
+                unreadNotification.close();
+            };
+
+            unreadNotification.onclose = function () {
+                let now = Date.now();
+                chrome.storage.local.set({ lastNotification: now });
+                chrome.storage.local.set({ silenceUntil: now + 60000 });
+            };
+        }
+
 
         // Only proceed if there are unread messages and notifications are not silenced
         if (hasUnreadMessages && now > silenceUntil) {
@@ -55,10 +89,9 @@ var checkForNotification = function () {
                     requireInteraction: true // Keeps the notification visible until user action
                 });
 
-                // Handle click to silence notifications for 1 minute
-                notification.onclick = function () {
-                    chrome.storage.local.set({ silenceUntil: now + 60000 }); // Silence for 1 minute
-                    notification.close(); // Close notification on click
+                notification.onclick = notification.onclose = () => {
+                    chrome.storage.local.set({ silenceUntil: Date.now() + 60000, lastNotification: Date.now() });
+                    notification.close();
                 };
 
                 // Update last notification time in Chrome storage
