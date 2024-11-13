@@ -1,0 +1,44 @@
+{
+  "author": "noushadbhuiyan7@gmail.com",
+  "browser_action": {
+    "default_icon": {
+      "128": "images/icon-128.png",
+      "16": "images/icon-16.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "all_frames": false,
+      "js": [
+        "scripts/jquery-3.4.1.min.js",
+        "scripts/contentscript.js"
+      ],
+      "matches": [
+        "https://www.fiverr.com/*seller_dashboard"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "description": "Chrome Extension to change the Fiverr icon and title when a notification is received.",
+  "icons": {
+    "128": "images/icon-128.png",
+    "16": "images/icon-16.png"
+  },
+  "manifest_version": 2,
+  "name": "Fiverr Notification Enhancer",
+  "permissions": [
+    "tabs",
+    "notifications",
+    "activeTab",
+    "storage"
+  ],
+  "short_name": "Fiverr Notifier",
+  "update_url": "https://clients2.google.com/service/update2/crx",
+  "version": "1.3.5",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    "https://cdn0.iconfinder.com/data/icons/socicons-2/512/Fiverr-512.png"
+  ]
+}
