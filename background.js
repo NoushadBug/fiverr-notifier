@@ -14,8 +14,8 @@ const audibleTabs = {};
 
 // Listen for changes in any tab's audible state
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    // Check if the tab's audible state changed
-    if (changeInfo.audible !== undefined) {
+    // Check if the tab's audible state changed and if it's about fiverr
+    if (changeInfo.audible !== undefined && tab.url.includes('fiverr')) {
         if (changeInfo.audible) {
             // If audio just started, show notification and store the tab ID
             if (!audibleTabs[tabId]) {
