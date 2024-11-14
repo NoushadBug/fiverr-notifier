@@ -1,96 +1,149 @@
-// Function to show a notification when audio is detected
-function showAudioNotification(tab) {
-    alert("No unread messages");
+var blackIcon = 'https://cdn0.iconfinder.com/data/icons/socicons-2/512/Fiverr-512.png';
 
-    var unreadMessages = document.querySelectorAll('[id^="Realtime"] ul');
-    if (unreadMessages.length > 0) {
-        chrome.storage.local.get(['silenceUntil', 'lastNotification'], function (result) {
-            let now = Date.now();
-            let silenceUntil = result.silenceUntil || 0;
-            let lastNotification = result.lastNotification || 0;
-            let hasUnreadMessages = $(".unread-icon:not(.notifications-drawer-bell-unread)").length > 0;
-            var unreadMessages = document.querySelectorAll('[id^="Realtime"] ul li');
-
-            // Only show notification if there are unread messages and it's been more than 1 minute since the last notification
-            if (unreadMessages.length > 0 && (now - lastNotification > 60000)) {
-                let bodyText;
-
-                if (unreadMessages.length === 1) {
-                    bodyText = unreadMessages[0].textContent.trim();
-                    bodyText = bodyText.substring(bodyText.indexOf('@') + 1).trim();
-                } else {
-                    let messageList = [];
-                    unreadMessages.forEach((message) => {
-                        let username = message.querySelector('.username')?.textContent.trim() || 'Unknown';
-                        messageList.push(`from - ${username}`);
-                    });
-                    bodyText = messageList.join('\n');
+function createNotification({ title, message, onclick, onclose }) {
+    chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'https://cdn0.iconfinder.com/data/icons/socicons-2/512/Fiverr-512.png',
+        title: `Fiverr Notifier :: ${title}`,
+        message,
+        requireInteraction: true,
+    }, (notificationId) => {
+        // Ensure the onclick listener is attached only once
+        if (onclick) {
+            chrome.notifications.onClicked.addListener(function onClickListener(id) {
+                if (id === notificationId) {
+                    onclick();
                 }
+            });
+        }
 
-                let firstUserName = unreadMessages[0].querySelector('.username')?.textContent.replace('@', '').trim();
+        // Ensure the onclose listener is attached only once
+        if (onclose) {
+            chrome.notifications.onClosed.addListener(function onCloseListener(id) {
+                if (id === notificationId) {
+                    onclose();
+                }
+            });
+        }
+    });
+}
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'createUnreadNotification') {
+        const { unreadMessages, bodyText, firstUserName } = message.data;
 
-                let unreadNotification = new Notification(`Fiverr :: ${unreadMessages.length} new unread messages`, {
-                    body: `𝗖𝗹𝗶𝗰𝗸 𝘁𝗼 𝗼𝗽𝗲𝗻 »
-    ` + bodyText,
-                    icon: 'https://cdn0.iconfinder.com/data/icons/socicons-2/512/Fiverr-512.png',
-                    requireInteraction: true
-                });
+        // Create the notification
+        chrome.notifications.create({
+            type: 'basic',
+            iconUrl: blackIcon,
+            title: `Fiverr Notifier :: ${unreadMessages} new unread messages`,
+            message: `𝗖𝗹𝗶𝗰𝗸 𝘁𝗼 𝗼𝗽𝗲𝗻 »\n` + bodyText,
+            requireInteraction: true
+        }, (notificationId) => {
 
-                unreadNotification.onclick = function (event) {
+            // Handle the click event
+            chrome.notifications.onClicked.addListener(function onClickListener(id) {
+                if (id === notificationId) {
                     let now = Date.now();
                     chrome.storage.local.set({ lastNotification: now });
                     chrome.storage.local.set({ silenceUntil: now + 60000 });
                     if (firstUserName) {
                         window.open(`https://www.fiverr.com/inbox/${firstUserName}`);
                     }
-                    unreadNotification.close();
-                };
+                    chrome.notifications.clear(notificationId);
+                }
+            });
 
-                unreadNotification.onclose = function () {
+            // Handle the close event
+            chrome.notifications.onClosed.addListener(function onCloseListener(id) {
+                if (id === notificationId) {
                     let now = Date.now();
                     chrome.storage.local.set({ lastNotification: now });
                     chrome.storage.local.set({ silenceUntil: now + 60000 });
-                };
-            }
-        });
-    } else {
-        chrome.storage.local.get(['lastNotification'], function (result) {
-            let lastNotification = result.lastNotification || 0;
-            if (now - lastNotification > 60000) {
-                new Notification('New Update on Fiverr!', {
-                    body: `Check out this fiverr tab: ${tab.title || 'a tab'}`,
-                    icon: 'https://cdn0.iconfinder.com/data/icons/socicons-2/512/Fiverr-512.png',
-                    requireInteraction: true
-                }).onclick = function () {
-                    chrome.storage.local.set({ lastNotification: now }); // Update lastNotification
-                    this.close(); // Close notification on click
-                };
-            }
+                }
+            });
         });
     }
+    if (message.action === 'createClearAllUnreadNotification') {
+        const { title, body } = message.data;
+
+        // Create the "clear all unread messages" notification
+        chrome.notifications.create({
+            type: 'basic',
+            iconUrl: blackIcon,
+            title: title,
+            message: body,
+            requireInteraction: true // Keeps the notification visible until user action
+        }, (notificationId) => {
+
+            // Handle the click or close event
+            chrome.notifications.onClicked.addListener(function onClickListener(id) {
+                if (id === notificationId) {
+                    let now = Date.now();
+                    chrome.storage.local.set({ silenceUntil: now + 60000, lastNotification: now });
+                    chrome.notifications.clear(notificationId); // Close the notification
+                }
+            });
+
+            chrome.notifications.onClosed.addListener(function onCloseListener(id) {
+                if (id === notificationId) {
+                    let now = Date.now();
+                    chrome.storage.local.set({ silenceUntil: now + 60000, lastNotification: now });
+                }
+            });
+        });
+    }
+});
+
+
+// Function to show a notification when audio is detected
+function showAudioNotification(tab) {
+    console.log("No unread messages");
+
+    chrome.storage.local.get(['lastNotification'], function (result) {
+        let now = Date.now();
+        let lastNotification = result.lastNotification || 0;
+
+        // Check if enough time has passed to show a new notification
+        if ((now - lastNotification > 60000) || lastNotification == 0) {
+            chrome.notifications.create({
+                type: 'basic',
+                iconUrl: 'https://cdn0.iconfinder.com/data/icons/socicons-2/512/Fiverr-512.png',
+                title: 'Fiverr Notifier :: an update arrived',
+                message: `Check this tab: ${tab.title || 'a Fiverr tab'}`,
+                requireInteraction: true
+            }, (notificationId) => {
+                // Listen for notification close event
+                chrome.notifications.onClosed.addListener((id, byUser) => {
+                    // Update last notification time in storage
+                    chrome.storage.local.set({ lastNotification: Date.now() });
+                });
+            });
+        }
+    });
 }
 
 // Track which tabs are currently playing audio
 const audibleTabs = {};
 
-// Listen for changes in any tab's audible state
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    // Check if the tab's audible state changed and if it's about fiverr
-    if (changeInfo.audible !== undefined && tab.url.includes('fiverr')) {
-        if (changeInfo.audible) {
-            // If audio just started, show notification and store the tab ID
-            if (!audibleTabs[tabId]) {
+// Function to check and notify for tabs with audio
+function checkAudibleTabs() {
+    chrome.tabs.query({ audible: true }, (tabs) => {
+        tabs.forEach((tab) => {
+            if (!audibleTabs[tab.id] && tab.url.includes('fiverr.com')) {
+                // Mark the tab as audible
+                audibleTabs[tab.id] = true;
                 showAudioNotification(tab);
-                audibleTabs[tabId] = true;  // Mark the tab as audible
             }
-        } else {
-            // If audio stopped, remove the tab from audible list
-            delete audibleTabs[tabId];
-        }
-    }
-});
+        });
 
-// Clear audible tab data when the tab is closed
-chrome.tabs.onRemoved.addListener((tabId) => {
-    delete audibleTabs[tabId];
-});
+        // Identify and remove tabs that have stopped playing audio
+        for (let tabId in audibleTabs) {
+            if (!tabs.some((tab) => tab.id == tabId)) {
+                delete audibleTabs[tabId]; // Remove the tab from the audible list
+            }
+        }
+    });
+}
+
+// Run the audio check every 100ms
+setInterval(checkAudibleTabs, 100);

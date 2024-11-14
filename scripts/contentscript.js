@@ -34,27 +34,14 @@ var checkForNotification = function () {
 
             let firstUserName = unreadMessages[0].querySelector('.username')?.textContent.replace('@', '').trim();
 
-            let unreadNotification = new Notification(`Fiverr :: ${unreadMessages.length} new unread messages`, {
-                body: `𝗖𝗹𝗶𝗰𝗸 𝘁𝗼 𝗼𝗽𝗲𝗻 »
-` + bodyText,
-                icon: 'https://cdn0.iconfinder.com/data/icons/socicons-2/512/Fiverr-512.png',
-                requireInteraction: true
+            chrome.runtime.sendMessage({
+                action: 'createUnreadNotification',
+                data: {
+                    unreadMessages: unreadMessages.length,
+                    bodyText: bodyText,
+                    firstUserName: firstUserName
+                }
             });
-
-            unreadNotification.onclick = function (event) {
-                let now = Date.now();
-                chrome.storage.local.set({ lastNotification: now });
-                chrome.storage.local.set({ silenceUntil: now + 60000 });
-                if (firstUserName) {
-                    window.open(`https://www.fiverr.com/inbox/${firstUserName}`);
-                } unreadNotification.close();
-            };
-
-            unreadNotification.onclose = function () {
-                let now = Date.now();
-                chrome.storage.local.set({ lastNotification: now });
-                chrome.storage.local.set({ silenceUntil: now + 60000 });
-            };
         }
 
 
@@ -84,16 +71,14 @@ var checkForNotification = function () {
 
             // Show desktop notification if at least 1 minute has passed since the last notification
             if (now - lastNotification > 60000) {
-                let notification = new Notification('New Fiverr Inbox Message', {
-                    body: 'Click to pause notifications for 1 minute.',
-                    icon: blackFav,
-                    requireInteraction: true // Keeps the notification visible until user action
+                chrome.runtime.sendMessage({
+                    action: 'createClearAllUnreadNotification',
+                    data: {
+                        title: 'Fiverr Notifier :: Clear all unread messages',
+                        body: 'Clear all unread messages on Fiverr, click to pause notifications for 1 minute',
+                        icon: blackFav
+                    }
                 });
-
-                notification.onclick = notification.onclose = () => {
-                    chrome.storage.local.set({ silenceUntil: Date.now() + 60000, lastNotification: Date.now() });
-                    notification.close();
-                };
 
                 // Update last notification time in Chrome storage
                 chrome.storage.local.set({ lastNotification: now });
