@@ -108,10 +108,10 @@ function showAudioNotification(tab) {
                 message: `Check this tab: ${tab.title || 'a Fiverr tab'}`,
                 requireInteraction: true
             }, (notificationId) => {
-                // Listen for notification close event
-                chrome.notifications.onClosed.addListener((id, byUser) => {
-                    // Update last notification time in storage
-                    chrome.storage.local.set({ lastNotification: Date.now() });
+                chrome.notifications.onClicked.addListener(function onClickListener(id) {
+                    if (id === notificationId) {
+                        chrome.tabs.update(tab.id, { active: true });
+                    }
                 });
             });
         }
@@ -125,10 +125,10 @@ const audibleTabs = {};
 function checkAudibleTabs() {
     chrome.tabs.query({ audible: true }, (tabs) => {
         tabs.forEach((tab) => {
-            if (!audibleTabs[tab.id] && tab.url.includes('fiverr.com') && tab.url.includes('seller_dashboard')) {
+            if (!audibleTabs[tab.id] && tab.url.includes('fiverr.com')) {
                 // Mark the tab as audible
                 audibleTabs[tab.id] = true;
-                chrome.tabs.sendMessage(tabId, { action: 'callCheckForNotification' }, (response) => {
+                chrome.tabs.sendMessage(tab.id, { action: 'callCheckForNotification' }, (response) => {
                     if (response && response.status === 'success') {
                         console.log('Function was successfully called in content.js');
                     }
