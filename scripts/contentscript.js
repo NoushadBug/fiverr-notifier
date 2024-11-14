@@ -86,3 +86,13 @@ var checkForNotification = function () {
         }
     });
 };
+
+
+// Listen for messages from background.js
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'callCheckForNotification') {
+        // Call your function here
+        checkForNotification();
+        sendResponse({status: 'success'});
+    }
+});

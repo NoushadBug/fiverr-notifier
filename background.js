@@ -46,14 +46,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 // chrome.storage.local.set({ lastNotification: now });
                 // chrome.storage.local.set({ silenceUntil: now + 60000 });
                 if (firstUserName) {
-                    chrome.tabs.query({}, function(tabs) {
-                        let existingTab = tabs.find(tab => tab.url === `https://www.fiverr.com/inbox/${firstUserName}`);
-                        if (existingTab) {
-                            chrome.tabs.update(existingTab.id, { active: true, url: existingTab.url });
-                        } else {
-                            chrome.tabs.create({ url: `https://www.fiverr.com/inbox/${firstUserName}` });
-                        }
-                    });
+                    chrome.tabs.create({ url: `https://www.fiverr.com/inbox/${firstUserName}` });
+
                 }
                 chrome.notifications.clear(notificationId);
             });
@@ -132,9 +126,14 @@ const audibleTabs = {};
 function checkAudibleTabs() {
     chrome.tabs.query({ audible: true }, (tabs) => {
         tabs.forEach((tab) => {
-            if (!audibleTabs[tab.id] && tab.url.includes('fiverr.com')) {
+            if (!audibleTabs[tab.id] && tab.url.includes('fiverr.com') && tab.url.includes('seller_dashboard')) {
                 // Mark the tab as audible
                 audibleTabs[tab.id] = true;
+                chrome.tabs.sendMessage(tabId, { action: 'callCheckForNotification' }, (response) => {
+                    if (response && response.status === 'success') {
+                        console.log('Function was successfully called in content.js');
+                    }
+                });
                 showAudioNotification(tab);
             }
         });
