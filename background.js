@@ -42,24 +42,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
             // Handle the click event
             chrome.notifications.onClicked.addListener(function onClickListener(id) {
-                if (id === notificationId) {
-                    let now = Date.now();
-                    chrome.storage.local.set({ lastNotification: now });
-                    chrome.storage.local.set({ silenceUntil: now + 60000 });
-                    if (firstUserName) {
-                        window.open(`https://www.fiverr.com/inbox/${firstUserName}`);
-                    }
-                    chrome.notifications.clear(notificationId);
+                let now = Date.now();
+                // chrome.storage.local.set({ lastNotification: now });
+                // chrome.storage.local.set({ silenceUntil: now + 60000 });
+                if (firstUserName) {
+                    chrome.tabs.query({}, function(tabs) {
+                        let existingTab = tabs.find(tab => tab.url === `https://www.fiverr.com/inbox/${firstUserName}`);
+                        if (existingTab) {
+                            chrome.tabs.update(existingTab.id, { active: true, url: existingTab.url });
+                        } else {
+                            chrome.tabs.create({ url: `https://www.fiverr.com/inbox/${firstUserName}` });
+                        }
+                    });
                 }
+                chrome.notifications.clear(notificationId);
             });
 
             // Handle the close event
             chrome.notifications.onClosed.addListener(function onCloseListener(id) {
-                if (id === notificationId) {
-                    let now = Date.now();
-                    chrome.storage.local.set({ lastNotification: now });
-                    chrome.storage.local.set({ silenceUntil: now + 60000 });
-                }
+                let now = Date.now();
+                chrome.storage.local.set({ lastNotification: now });
+                chrome.storage.local.set({ silenceUntil: now + 60000 });
             });
         });
     }

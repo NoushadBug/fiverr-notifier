@@ -14,15 +14,16 @@ var checkForNotification = function () {
         let silenceUntil = result.silenceUntil || 0;
         let lastNotification = result.lastNotification || 0;
         let hasUnreadMessages = $(".unread-icon:not(.notifications-drawer-bell-unread)").length > 0;
-        var unreadMessages = document.querySelectorAll('[id^="Realtime"] ul li');
+        var unreadMessages = document.querySelectorAll('[id^="Realtime"] ul li .item-content-wrapper');
 
         // Only show notification if there are unread messages and it's been more than 1 minute since the last notification
         if (unreadMessages.length > 0 && (now - lastNotification > 60000)) {
             let bodyText;
 
             if (unreadMessages.length === 1) {
-                bodyText = unreadMessages[0].textContent.trim();
-                bodyText = bodyText.substring(bodyText.indexOf('@') + 1).trim();
+                let username = unreadMessages[0].querySelector('.username')?.textContent.trim() || 'Unknown';
+                let messageText = unreadMessages[0].textContent.replace(unreadMessages[0].querySelector('.content-container')?.textContent || '', '').trim();
+                bodyText = 'From: ' + username + '\n' + 'Message: ' + messageText;
             } else {
                 let messageList = [];
                 unreadMessages.forEach((message) => {
@@ -75,8 +76,7 @@ var checkForNotification = function () {
                     action: 'createClearAllUnreadNotification',
                     data: {
                         title: 'Fiverr Notifier :: Clear all unread messages',
-                        body: 'Clear all unread messages on Fiverr, click to pause notifications for 1 minute',
-                        icon: blackFav
+                        body: 'Clear all unread messages on Fiverr, click to pause notifications for 1 minute'
                     }
                 });
 
