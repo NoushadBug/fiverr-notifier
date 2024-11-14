@@ -46,8 +46,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 // chrome.storage.local.set({ lastNotification: now });
                 // chrome.storage.local.set({ silenceUntil: now + 60000 });
                 if (firstUserName) {
-                    chrome.tabs.create({ url: `https://www.fiverr.com/inbox/${firstUserName}` });
-
+                    chrome.tabs.create({ url: `https://www.fiverr.com/inbox/${firstUserName}`, active: false });
                 }
                 chrome.notifications.clear(notificationId);
             });
