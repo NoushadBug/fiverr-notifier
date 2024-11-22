@@ -1,37 +1,61 @@
 var blackIcon = 'https://cdn0.iconfinder.com/data/icons/socicons-2/512/Fiverr-512.png';
 
-function createNotification({ title, message, onclick, onclose }) {
+// Helper function to clear all notifications
+function clearAllNotifications() {
+    chrome.notifications.getAll((notifications) => {
+        for (let id in notifications) {
+            chrome.notifications.clear(id);
+        }
+    });
+}
+
+// Notify content.js to execute interactWithMessagesWrapper
+function notifyContentScript(tabId) {
+    chrome.tabs.sendMessage(tabId, { action: 'interactWithMessagesWrapper' }, (response) => {
+        if (chrome.runtime.lastError) {
+            console.warn("Could not send message to content script:", chrome.runtime.lastError.message);
+        } else if (response && response.status === 'success') {
+            console.log('Interaction with messages wrapper completed successfully.');
+        }
+    });
+}
+
+// Function to create notifications with event handlers
+function createNotification({ title, message, tabId, onclick, onclose }) {
     chrome.notifications.create({
         type: 'basic',
-        iconUrl: 'https://cdn0.iconfinder.com/data/icons/socicons-2/512/Fiverr-512.png',
+        iconUrl: blackIcon,
         title: `Fiverr Notifier :: ${title}`,
         message,
         requireInteraction: true,
     }, (notificationId) => {
-        // Ensure the onclick listener is attached only once
         if (onclick) {
             chrome.notifications.onClicked.addListener(function onClickListener(id) {
                 if (id === notificationId) {
+                    notifyContentScript(tabId); // Notify content script
+                    clearAllNotifications(); // Clear all uncleared notifications
                     onclick();
+                    chrome.notifications.onClicked.removeListener(onClickListener);
                 }
             });
         }
 
-        // Ensure the onclose listener is attached only once
         if (onclose) {
             chrome.notifications.onClosed.addListener(function onCloseListener(id) {
                 if (id === notificationId) {
                     onclose();
+                    chrome.notifications.onClosed.removeListener(onCloseListener);
                 }
             });
         }
     });
 }
+
+// Listener for incoming messages from other scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'createUnreadNotification') {
         const { unreadMessages, bodyText, firstUserName } = message.data;
 
-        // Create the notification
         chrome.notifications.create({
             type: 'basic',
             iconUrl: blackIcon,
@@ -39,56 +63,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             message: `𝗖𝗹𝗶𝗰𝗸 𝘁𝗼 𝗼𝗽𝗲𝗻 »\n` + bodyText,
             requireInteraction: true
         }, (notificationId) => {
-
-            // Handle the click event
             chrome.notifications.onClicked.addListener(function onClickListener(id) {
-                let now = Date.now();
-                // chrome.storage.local.set({ lastNotification: now });
-                // chrome.storage.local.set({ silenceUntil: now + 60000 });
-                if (firstUserName) {
-                    chrome.tabs.create({ url: `https://www.fiverr.com/inbox/${firstUserName}`, active: false });
+                if (id === notificationId) {
+                    notifyContentScript(sender.tab.id); // Notify content script
+                    clearAllNotifications(); // Clear notifications
+                    if (firstUserName) {
+                        chrome.tabs.create({ url: `https://www.fiverr.com/inbox/${firstUserName}`, active: false });
+                    }
+                    chrome.notifications.onClicked.removeListener(onClickListener);
                 }
-                chrome.notifications.clear(notificationId);
-            });
-
-            // Handle the close event
-            chrome.notifications.onClosed.addListener(function onCloseListener(id) {
-                let now = Date.now();
-                chrome.storage.local.set({ lastNotification: now });
-                chrome.storage.local.set({ silenceUntil: now + 60000 });
             });
         });
     }
+
     if (message.action === 'createClearAllUnreadNotification') {
         const { title, body } = message.data;
 
-        // Create the "clear all unread messages" notification
         chrome.notifications.create({
             type: 'basic',
             iconUrl: blackIcon,
             title: title,
             message: body,
-            requireInteraction: true // Keeps the notification visible until user action
+            requireInteraction: true
         }, (notificationId) => {
-
-            // Handle the click or close event
             chrome.notifications.onClicked.addListener(function onClickListener(id) {
                 if (id === notificationId) {
+                    notifyContentScript(sender.tab.id); // Notify content script
+                    clearAllNotifications(); // Clear notifications
                     let now = Date.now();
                     chrome.storage.local.set({ silenceUntil: now + 60000, lastNotification: now });
-                    chrome.notifications.clear(notificationId); // Close the notification
-                }
-            });
-
-            chrome.notifications.onClosed.addListener(function onCloseListener(id) {
-                if (id === notificationId) {
-                    let now = Date.now();
-                    chrome.storage.local.set({ silenceUntil: now + 60000, lastNotification: now });
+                    chrome.notifications.onClicked.removeListener(onClickListener);
                 }
             });
         });
     }
 });
+
 
 
 // Function to show a notification when audio is detected
@@ -110,6 +120,8 @@ function showAudioNotification(tab) {
             }, (notificationId) => {
                 chrome.notifications.onClicked.addListener(function onClickListener(id) {
                     if (id === notificationId) {
+                        notifyContentScript(sender.tab.id); // Notify content script
+                        clearAllNotifications(); // Clear notifications
                         chrome.tabs.update(tab.id, { active: true });
                     }
                 });

@@ -87,12 +87,97 @@ var checkForNotification = function () {
     });
 };
 
+// Function to interact with the DOM
+function interactWithMessagesWrapper() {
+    try {
+        // Select the button elements
+        const buttons = document.querySelectorAll('.messages-wrapper button');
+
+        if (buttons.length > 1) {
+            const button = buttons[1];
+
+            // Scroll the button into view
+            button.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Simulate mouse hover using mouse events
+            const mouseEnterEvent = new MouseEvent('mouseenter', {
+                bubbles: true,
+                cancelable: true,
+                view: window
+            });
+
+            const mouseOverEvent = new MouseEvent('mouseover', {
+                bubbles: true,
+                cancelable: true,
+                view: window
+            });
+
+            // Dispatch the hover events
+            button.dispatchEvent(mouseEnterEvent);
+            button.dispatchEvent(mouseOverEvent);
+
+            // Click the button
+            button.click();
+
+            console.log('Simulated mouse hover over the button');
+        } else {
+            console.warn("Button not found or less than 2 buttons exist in '.messages-wrapper'.");
+        }
+
+        // Use setInterval to check for the .toggle-read elements periodically
+        const checkToggleRead = setInterval(() => {
+            const toggleReadElements = document.querySelectorAll('.toggle-read[content="Mark as Read"]');
+            if (toggleReadElements.length > 0) {
+                // Once .toggle-read elements are found, click them
+                toggleReadElements.forEach((element) => {
+                    element.click();
+                });
+
+                console.log('Clicked all Mark as Read elements.');
+
+                // Stop the interval once the elements are clicked
+                clearInterval(checkToggleRead);
+            } else {
+                console.log('Waiting for .toggle-read elements...');
+            }
+        }, 500); // Check every 500ms
+
+        // Click the second button in the '.messages-wrapper' container again
+        if (buttons.length > 1) {
+            buttons[1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Simulate mouse movement to the button
+            const buttonRect = buttons[1].getBoundingClientRect();
+            const mouseMoveEvent = new MouseEvent('mousemove', {
+                bubbles: true,
+                cancelable: true,
+                clientX: buttonRect.left + buttonRect.width / 2,
+                clientY: buttonRect.top + buttonRect.height / 2,
+            });
+            document.dispatchEvent(mouseMoveEvent);
+
+            // Click the button
+            buttons[1].click();
+        } else {
+            console.warn("Button not found or less than 2 buttons exist in '.messages-wrapper'.");
+        }
+    } catch (error) {
+        console.error("An error occurred while interacting with the messages wrapper:", error);
+    }
+}
+
+
+
 
 // Listen for messages from background.js
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'interactWithMessagesWrapper') {
+        interactWithMessagesWrapper();
+        sendResponse({ status: 'success' });
+    }
     if (message.action === 'callCheckForNotification') {
         // Call your function here
         checkForNotification();
-        sendResponse({status: 'success'});
+        sendResponse({ status: 'success' });
     }
 });
